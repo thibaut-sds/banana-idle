@@ -2,6 +2,35 @@
 #include "game.h"
 #include "raylib.h"
 
+#define MAX_FLOATING_TEXTS 50
+
+typedef struct {
+    Vector2 position;
+    float life;      // lifetime remaining
+    float maxLife;   // lifetime at the start (for fading)
+    char text[64];
+    bool active;
+} FloatingText;
+
+typedef struct {
+    float currentBananaScale;
+    float targetBananaScale;
+    FloatingText texts[MAX_FLOATING_TEXTS];
+} VisualEffects;
+
+typedef struct {
+    // Banana
+    Texture2D bananaTex;
+    Vector2 baseBananaPos;
+    Rectangle bananaRec;
+    
+    // Shop assets
+    Texture2D shopTex;
+    Vector2 shopPos;
+    Rectangle shopRec;
+    float shopScale;
+} GameAssets;
+
 
 typedef enum GameScreen {
     SCREEN_TITLE = 0,
@@ -12,8 +41,8 @@ typedef enum GameScreen {
 const int SCREEN_WIDTH = 800;
 const int SCREEN_HEIGHT = 600;
 
-void UpdateScreens(GameState* state, GameScreen* screen, Rectangle bananaRec, Rectangle shopRec, float dt);
-void DrawScreens(GameState* state, GameScreen screen, Texture2D bananaTex, Vector2 bananaPos, float bananaScale, Texture2D shopTex, Vector2 shopPos, float shopScale);
+void DrawScreens(GameState* state, VisualEffects* fx, GameScreen screen, GameAssets* assets);
+void UpdateScreens(GameState* state, VisualEffects* fx, GameScreen* screen, GameAssets* assets, float dt);
 
 int main(void) {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Banana Idle");
@@ -22,59 +51,71 @@ int main(void) {
     GameState gameState;
     InitGame(&gameState);
 
-    // Load banana texture and set filter for pixel art
-    Texture2D bananaTex = LoadTexture("assets/graphics/banana.png");
-    SetTextureFilter(bananaTex, TEXTURE_FILTER_POINT);
+    VisualEffects fx = {0};
+    fx.targetBananaScale = 8.0f;
+    fx.currentBananaScale = 8.0f;
 
-    Texture2D shopTex = LoadTexture("assets/graphics/shop.png");
-    SetTextureFilter(shopTex, TEXTURE_FILTER_POINT);
+    // Assets
+    GameAssets assets;
+    assets.bananaTex = LoadTexture("assets/graphics/banana.png");
+    SetTextureFilter(assets.bananaTex, TEXTURE_FILTER_POINT);
+    assets.shopTex = LoadTexture("assets/graphics/shop.png");
+    SetTextureFilter(assets.shopTex, TEXTURE_FILTER_POINT);
+
+    // Banana
+    float bananaScale = 8.0f; 
+    float scaledWidth = assets.bananaTex.width * bananaScale;
+    float scaledHeight = assets.bananaTex.height * bananaScale;
+    assets.baseBananaPos = (Vector2){ (SCREEN_WIDTH / 2.0f) - (scaledWidth / 2.0f), (SCREEN_HEIGHT / 2.0f) - (scaledHeight / 2.0f) };
+    assets.bananaRec = (Rectangle){ assets.baseBananaPos.x, assets.baseBananaPos.y, scaledWidth, scaledHeight };
+
+    // Shop
+    assets.shopScale = 4.0f; 
+    float shopScaledWidth = assets.shopTex.width * assets.shopScale;
+    float shopScaledHeight = assets.shopTex.height * assets.shopScale;
+    assets.shopPos = (Vector2){ SCREEN_WIDTH - shopScaledWidth - 20, 20 };
+    assets.shopRec = (Rectangle){ assets.shopPos.x, assets.shopPos.y, shopScaledWidth, shopScaledHeight };
 
     GameScreen currentScreen = SCREEN_TITLE;
     
-    // Position and size for the banana sprite
-    float bananaScale = 8.0f; // 32px * 8 = 256px 
-    float scaledWidth = bananaTex.width * bananaScale;
-    float scaledHeight = bananaTex.height * bananaScale;
     
-    Vector2 bananaPos = {
-        (SCREEN_WIDTH / 2.0f) - (scaledWidth / 2.0f),
-        (SCREEN_HEIGHT / 2.0f) - (scaledHeight / 2.0f)
-    };
-    
-    // Collision must be based on the scaled size and position of the banana
-    Rectangle bananaRec = { bananaPos.x, bananaPos.y, scaledWidth, scaledHeight };
-
-    // SHOP
-    float shopScale = 4.0f; 
-    float shopScaledWidth = shopTex.width * shopScale;
-    float shopScaledHeight = shopTex.height * shopScale;
-    
-    Vector2 shopPos = {
-        SCREEN_WIDTH - shopScaledWidth - 20, 
-        20                                   
-    };
-    Rectangle shopRec = { shopPos.x, shopPos.y, shopScaledWidth, shopScaledHeight };
-
     // Main game loop
     while (!WindowShouldClose()) {
         float dt = GetFrameTime();
         
         // Update game logic 
-        UpdateScreens(&gameState, &currentScreen, bananaRec, shopRec, dt);
+        UpdateScreens(&gameState, &fx, &currentScreen, &assets, dt);
         
         BeginDrawing();
         ClearBackground(RAYWHITE);
-        DrawScreens(&gameState, currentScreen, bananaTex, bananaPos, bananaScale, shopTex, shopPos, shopScale);
+        DrawScreens(&gameState, &fx, currentScreen, &assets);
         EndDrawing();
     }
 
-    UnloadTexture(bananaTex);
-    UnloadTexture(shopTex);
+    UnloadTexture(assets.bananaTex);
+    UnloadTexture(assets.shopTex);
     CloseWindow();
     return 0;
 }
 
-void UpdateScreens(GameState* state, GameScreen* screen, Rectangle bananaRec, Rectangle shopRec, float dt) {
+void UpdateScreens(GameState* state, VisualEffects* fx, GameScreen* screen, GameAssets* assets, float dt) {
+    
+    // banana scale effect
+    float speed = 15.0f; 
+    fx->currentBananaScale += (fx->targetBananaScale - fx->currentBananaScale) * speed * dt;
+
+    // update floating texts
+    for (int i = 0; i < MAX_FLOATING_TEXTS; i++) {
+        if (fx->texts[i].active) {
+            fx->texts[i].life -= dt;
+            fx->texts[i].position.y -= 50.0f * dt; // Floating to the top
+            if (fx->texts[i].life <= 0) {
+                fx->texts[i].active = false;
+            }
+        }
+    }
+
+    // screens logic
     switch(*screen) {
         case SCREEN_TITLE:
             if (IsKeyPressed(KEY_ENTER) || IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
@@ -89,11 +130,29 @@ void UpdateScreens(GameState* state, GameScreen* screen, Rectangle bananaRec, Re
                 Vector2 mousePos = GetMousePosition();
                 
                 // Click on the banana
-                if (CheckCollisionPointRec(mousePos, bananaRec)) {
+                if (CheckCollisionPointRec(mousePos, assets->bananaRec)) {
                     ClickBanana(state);
+                    
+                    // juice
+                    fx->currentBananaScale = 7.5f; // squish effect
+                    
+                    // text : +x bananas
+                    for (int i = 0; i < MAX_FLOATING_TEXTS; i++) {
+                        if (!fx->texts[i].active) {
+                            fx->texts[i].active = true;
+                            fx->texts[i].life = 1.0f; 
+                            fx->texts[i].maxLife = 1.0f;
+                            fx->texts[i].position = mousePos; 
+                            
+                            char gainStr[32];
+                            BigNumberToString(state->clickPower, gainStr, sizeof(gainStr));
+                            snprintf(fx->texts[i].text, sizeof(fx->texts[i].text), "+%s", gainStr);
+                            break; 
+                        }
+                    }
                 }
-                // Click on the shop
-                if (CheckCollisionPointRec(mousePos, shopRec)) {
+                // Click on the shop button
+                if (CheckCollisionPointRec(mousePos, assets->shopRec)) {
                     *screen = SCREEN_SHOP;
                 }
             }
@@ -102,12 +161,10 @@ void UpdateScreens(GameState* state, GameScreen* screen, Rectangle bananaRec, Re
         case SCREEN_SHOP:
             UpdateGame(state, dt);
 
-            // Left the shop with ENTER
-            if (IsKeyPressed(KEY_ENTER)) {
+            if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_ESCAPE)) {
                 *screen = SCREEN_GAMEPLAY;
             }
             
-            // Temporary purchases with keyboard (waiting for clickable buttons)
             if (IsKeyPressed(KEY_C)) {
                 BuyClickUpgrade(state);
             }
@@ -118,7 +175,7 @@ void UpdateScreens(GameState* state, GameScreen* screen, Rectangle bananaRec, Re
     }
 }
 
-void DrawScreens(GameState* state, GameScreen screen, Texture2D bananaTex, Vector2 bananaPos, float bananaScale, Texture2D shopTex, Vector2 shopPos, float shopScale) {
+void DrawScreens(GameState* state, VisualEffects* fx, GameScreen screen, GameAssets* assets) {
     char scoreBuffer[64];
 
     switch(screen) {
@@ -128,24 +185,37 @@ void DrawScreens(GameState* state, GameScreen screen, Texture2D bananaTex, Vecto
             break;
             
         case SCREEN_GAMEPLAY:
-            // Score
             BigNumberToString(state->bananas, scoreBuffer, sizeof(scoreBuffer));
             DrawText(TextFormat("Bananas: %s", scoreBuffer), 30, 30, 30, BLACK);
             
-            //Banana drawing 
-            DrawTextureEx(bananaTex, bananaPos, 0.0f, bananaScale, WHITE);
-            DrawTextureEx(shopTex, shopPos, 0.0f, shopScale, WHITE);
+            // banana's draw with scale effect
+            float currentWidth = assets->bananaTex.width * fx->currentBananaScale;
+            float currentHeight = assets->bananaTex.height * fx->currentBananaScale;
+            Vector2 dynamicPos = {
+                assets->baseBananaPos.x + ((assets->bananaTex.width * fx->targetBananaScale) - currentWidth) / 2.0f,
+                assets->baseBananaPos.y + ((assets->bananaTex.height * fx->targetBananaScale) - currentHeight) / 2.0f
+            };
+            
+            DrawTextureEx(assets->bananaTex, dynamicPos, 0.0f, fx->currentBananaScale, WHITE);
+            DrawTextureEx(assets->shopTex, assets->shopPos, 0.0f, assets->shopScale, WHITE);
+            
+            // Drawing floating texts
+            for (int i = 0; i < MAX_FLOATING_TEXTS; i++) {
+                if (fx->texts[i].active) {
+                    unsigned char alpha = (unsigned char)((fx->texts[i].life / fx->texts[i].maxLife) * 255);
+                    Color textColor = { 50, 200, 50, alpha }; 
+                    DrawText(fx->texts[i].text, (int)fx->texts[i].position.x, (int)fx->texts[i].position.y, 20, textColor);
+                }
+            }
             break;
 
         case SCREEN_SHOP:
             DrawText("--- SHOP ---", 280, 50, 40, DARKBLUE);
             DrawText("Press ENTER to return to the game", 180, 550, 20, DARKGRAY);
 
-            // Display score even in the shop
             BigNumberToString(state->bananas, scoreBuffer, sizeof(scoreBuffer));
             DrawText(TextFormat("Bananas: %s", scoreBuffer), 30, 30, 20, BLACK);
 
-            // Display upgrades
             char clickCostStr[32];
             BigNumberToString(state->shop.clickUpgrade.currentCost, clickCostStr, sizeof(clickCostStr));
             DrawText(TextFormat("[C] Double Clic (Lvl %d) - Cost: %s", state->shop.clickUpgrade.level, clickCostStr), 50, 150, 20, BLACK);

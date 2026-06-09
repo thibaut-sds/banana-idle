@@ -2,6 +2,7 @@
 #include "game.h"
 #include "raylib.h"
 #include "ui.h"
+#include "assetsManager.h"
 
 #define MAX_FLOATING_TEXTS 50
 
@@ -18,22 +19,6 @@ typedef struct {
     float targetBananaScale;
     FloatingText texts[MAX_FLOATING_TEXTS];
 } VisualEffects;
-
-typedef struct {
-    // Backgrounds
-    Texture2D bgGameplayTex;
-
-    // Banana
-    Texture2D bananaTex;
-    Vector2 baseBananaPos;
-    Rectangle bananaRec;
-    
-    // Shop assets
-    Texture2D shopTex;
-    Vector2 shopPos;
-    Rectangle shopRec;
-    float shopScale;
-} GameAssets;
 
 
 typedef enum GameScreen {
@@ -61,25 +46,7 @@ int main(void) {
 
     // Assets
     GameAssets assets;
-    assets.bgGameplayTex = LoadTexture("assets/graphics/background_gamescreen.png");
-    assets.bananaTex = LoadTexture("assets/graphics/banana.png");
-    SetTextureFilter(assets.bananaTex, TEXTURE_FILTER_POINT);
-    assets.shopTex = LoadTexture("assets/graphics/shop.png");
-    SetTextureFilter(assets.shopTex, TEXTURE_FILTER_POINT);
-
-    // Banana
-    float bananaScale = 8.0f; 
-    float scaledWidth = assets.bananaTex.width * bananaScale;
-    float scaledHeight = assets.bananaTex.height * bananaScale;
-    assets.baseBananaPos = (Vector2){ (SCREEN_WIDTH / 2.0f) - (scaledWidth / 2.0f), (SCREEN_HEIGHT / 2.0f) - (scaledHeight / 2.0f) };
-    assets.bananaRec = (Rectangle){ assets.baseBananaPos.x, assets.baseBananaPos.y, scaledWidth, scaledHeight };
-
-    // Shop
-    assets.shopScale = 4.0f; 
-    float shopScaledWidth = assets.shopTex.width * assets.shopScale;
-    float shopScaledHeight = assets.shopTex.height * assets.shopScale;
-    assets.shopPos = (Vector2){ SCREEN_WIDTH - shopScaledWidth - 20, 20 };
-    assets.shopRec = (Rectangle){ assets.shopPos.x, assets.shopPos.y, shopScaledWidth, shopScaledHeight };
+    LoadGameAssets(&assets, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     GameScreen currentScreen = SCREEN_TITLE;
     
@@ -97,9 +64,7 @@ int main(void) {
         EndDrawing();
     }
 
-    UnloadTexture(assets.bgGameplayTex);
-    UnloadTexture(assets.bananaTex);
-    UnloadTexture(assets.shopTex);
+    UnloadGameAssets(&assets);
     CloseWindow();
     return 0;
 }
@@ -174,15 +139,11 @@ void UpdateScreens(GameState* state, VisualEffects* fx, GameScreen* screen, Game
             if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 Vector2 mousePos = GetMousePosition();
                 
-                // define shop buttons rectangles
-                Rectangle btnClickRec = { 50, 140, 400, 40 };
-                Rectangle btnIdleRec = { 50, 190, 400, 40 };
-                
-                if (CheckCollisionPointRec(mousePos, btnClickRec)) {
+                if (CheckCollisionPointRec(mousePos, assets->btnClickRec)) {
                     BuyClickUpgrade(state);
                 }
                 
-                if (CheckCollisionPointRec(mousePos, btnIdleRec)) {
+                if (CheckCollisionPointRec(mousePos, assets->btnIdleRec)) {
                     BuyIdleUpgrade(state);
                 }
             }
@@ -232,9 +193,6 @@ void DrawScreens(GameState* state, VisualEffects* fx, GameScreen screen, GameAss
             BigNumberToString(state->bananas, scoreBuffer, sizeof(scoreBuffer));
             DrawText(TextFormat("Bananas: %s", scoreBuffer), 30, 30, 20, BLACK);
 
-            Rectangle btnClickRec = { 50, 140, 400, 40 };
-            Rectangle btnIdleRec = { 50, 190, 400, 40 };
-
             char clickCostStr[32];
             BigNumberToString(state->shop.clickUpgrade.currentCost, clickCostStr, sizeof(clickCostStr));
             const char* clickText = TextFormat("Double Clic (Lvl %d) - Cost: %s", state->shop.clickUpgrade.level, clickCostStr);
@@ -245,8 +203,8 @@ void DrawScreens(GameState* state, VisualEffects* fx, GameScreen screen, GameAss
             const char* idleText = TextFormat("+1 Banana/sec (Lvl %d) - Cost: %s", state->shop.idleUpgrade.level, idleCostStr);
             bool canAffordIdle = (BigNumberCompare(state->bananas, state->shop.idleUpgrade.currentCost) >= 0);
 
-            DrawShopButton(btnClickRec, clickText, canAffordClick);
-            DrawShopButton(btnIdleRec, idleText, canAffordIdle);
+            DrawShopButton(assets->btnClickRec, clickText, canAffordClick);
+            DrawShopButton(assets->btnIdleRec, idleText, canAffordIdle);
             break;
     }
 }

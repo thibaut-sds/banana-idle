@@ -3,28 +3,16 @@
 #include "raylib.h"
 #include "ui.h"
 #include "assetsManager.h"
+#include <math.h>
+#include "vfxManager.h"
 
 #define MAX_FLOATING_TEXTS 50
-
-typedef struct {
-    Vector2 position;
-    float life;      // lifetime remaining
-    float maxLife;   // lifetime at the start (for fading)
-    char text[64];
-    bool active;
-} FloatingText;
-
-typedef struct {
-    float currentBananaScale;
-    float targetBananaScale;
-    FloatingText texts[MAX_FLOATING_TEXTS];
-} VisualEffects;
 
 
 typedef enum GameScreen {
     SCREEN_TITLE = 0,
     SCREEN_GAMEPLAY,
-    SCREEN_SHOP // todo
+    SCREEN_SHOP 
 } GameScreen;
 
 const int SCREEN_WIDTH = 800;
@@ -40,9 +28,8 @@ int main(void) {
     GameState gameState;
     InitGame(&gameState);
 
-    VisualEffects fx = {0};
-    fx.targetBananaScale = 8.0f;
-    fx.currentBananaScale = 8.0f;
+    VisualEffects fx;
+    InitVFX(&fx);
 
     // Assets
     GameAssets assets;
@@ -70,21 +57,13 @@ int main(void) {
 }
 
 void UpdateScreens(GameState* state, VisualEffects* fx, GameScreen* screen, GameAssets* assets, float dt) {
-    
-    // banana scale effect
-    float speed = 15.0f; 
-    fx->currentBananaScale += (fx->targetBananaScale - fx->currentBananaScale) * speed * dt;
+    UpdateVFX(fx, dt);
 
-    // update floating texts
-    for (int i = 0; i < MAX_FLOATING_TEXTS; i++) {
-        if (fx->texts[i].active) {
-            fx->texts[i].life -= dt;
-            fx->texts[i].position.y -= 50.0f * dt; // Floating to the top
-            if (fx->texts[i].life <= 0) {
-                fx->texts[i].active = false;
-            }
-        }
-    }
+    // Shop button animation on hover
+    Vector2 mousePos = GetMousePosition();
+
+    bool isShopHovered = (*screen == SCREEN_GAMEPLAY) && CheckCollisionPointRec(mousePos, assets->shopRec);
+    UpdateShopButtonHover(fx, isShopHovered, dt);
 
     // screens logic
     switch(*screen) {
@@ -98,8 +77,6 @@ void UpdateScreens(GameState* state, VisualEffects* fx, GameScreen* screen, Game
             UpdateGame(state, dt);
             
             if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                Vector2 mousePos = GetMousePosition();
-                
                 // Click on the banana
                 if (CheckCollisionPointRec(mousePos, assets->bananaRec)) {
                     ClickBanana(state);
@@ -107,23 +84,15 @@ void UpdateScreens(GameState* state, VisualEffects* fx, GameScreen* screen, Game
                     // juice
                     fx->currentBananaScale = 7.5f; // squish effect
                     
-                    // text : +x bananas
-                    for (int i = 0; i < MAX_FLOATING_TEXTS; i++) {
-                        if (!fx->texts[i].active) {
-                            fx->texts[i].active = true;
-                            fx->texts[i].life = 1.0f; 
-                            fx->texts[i].maxLife = 1.0f;
-                            fx->texts[i].position = mousePos; 
-                            
-                            char gainStr[32];
-                            BigNumberToString(state->clickPower, gainStr, sizeof(gainStr));
-                            snprintf(fx->texts[i].text, sizeof(fx->texts[i].text), "+%s", gainStr);
-                            break; 
-                        }
-                    }
+                    // Text : +x bananas
+                    char gainStr[32];
+                    BigNumberToString(state->clickPower, gainStr, sizeof(gainStr));
+                    char fullText[64];
+                    snprintf(fullText, sizeof(fullText), "+%s", gainStr);
+                    SpawnFloatingText(fx, mousePos, fullText);
                 }
                 // Click on the shop button
-                if (CheckCollisionPointRec(mousePos, assets->shopRec)) {
+                if (isShopHovered) {
                     *screen = SCREEN_SHOP;
                 }
             }
@@ -138,6 +107,10 @@ void UpdateScreens(GameState* state, VisualEffects* fx, GameScreen* screen, Game
             
             if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 Vector2 mousePos = GetMousePosition();
+
+                if (CheckCollisionPointRec(mousePos, assets->backBtnRec)) {
+                    *screen = SCREEN_GAMEPLAY;
+                }
                 
                 if (CheckCollisionPointRec(mousePos, assets->btnClickRec)) {
                     BuyClickUpgrade(state);
@@ -163,7 +136,7 @@ void DrawScreens(GameState* state, VisualEffects* fx, GameScreen screen, GameAss
         case SCREEN_GAMEPLAY:
             DrawTexture(assets->bgGameplayTex, 0, 0, WHITE);
             BigNumberToString(state->bananas, scoreBuffer, sizeof(scoreBuffer));
-            DrawText(TextFormat("Bananas: %s", scoreBuffer), 30, 30, 30, BLACK);
+            DrawBananaCounter((Vector2){ 20, 20 }, scoreBuffer, assets->bananaTex);
             
             // banana's draw with scale effect
             float currentWidth = assets->bananaTex.width * fx->currentBananaScale;
@@ -174,8 +147,21 @@ void DrawScreens(GameState* state, VisualEffects* fx, GameScreen screen, GameAss
             };
             
             DrawTextureEx(assets->bananaTex, dynamicPos, 0.0f, fx->currentBananaScale, WHITE);
-            DrawTextureEx(assets->shopTex, assets->shopPos, 0.0f, assets->shopScale, WHITE);
+
+            float shopScaledWidth = assets->shopTex.width * assets->shopScale;
+            float shopScaledHeight = assets->shopTex.height * assets->shopScale;
+            Rectangle sourceRec = { 0.0f, 0.0f, (float)assets->shopTex.width, (float)assets->shopTex.height };
+            // offset the destination from the center of the image so that the rotation is centered
+            Rectangle destRec = {
+                assets->shopPos.x + (shopScaledWidth / 2.0f),
+                assets->shopPos.y + (shopScaledHeight / 2.0f),
+                shopScaledWidth,
+                shopScaledHeight
+            };
+            Vector2 origin = { shopScaledWidth / 2.0f, shopScaledHeight / 2.0f }; // The axis of rotation in the middle
             
+            DrawTexturePro(assets->shopTex, sourceRec, destRec, origin, fx->shopButtonRotation, WHITE);
+
             // Drawing floating texts
             for (int i = 0; i < MAX_FLOATING_TEXTS; i++) {
                 if (fx->texts[i].active) {
@@ -191,7 +177,9 @@ void DrawScreens(GameState* state, VisualEffects* fx, GameScreen screen, GameAss
             DrawText("Press ENTER to return to the game", 180, 550, 20, DARKGRAY);
 
             BigNumberToString(state->bananas, scoreBuffer, sizeof(scoreBuffer));
-            DrawText(TextFormat("Bananas: %s", scoreBuffer), 30, 30, 20, BLACK);
+            DrawBananaCounter((Vector2){ 160, 20 }, scoreBuffer, assets->bananaTex);
+
+            DrawTextureEx(assets->backBtnTex, assets->backBtnPos, 0.0f, assets->backBtnScale, WHITE);
 
             char clickCostStr[32];
             BigNumberToString(state->shop.clickUpgrade.currentCost, clickCostStr, sizeof(clickCostStr));

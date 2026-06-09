@@ -22,6 +22,12 @@ typedef struct {
     // Shop's layouts
     Rectangle btnClickRec;
     Rectangle btnIdleRec;
+
+    // Back button
+    Texture2D backBtnTex;
+    Vector2 backBtnPos;
+    Rectangle backBtnRec;
+    float backBtnScale;
 } GameAssets;
 
 /**

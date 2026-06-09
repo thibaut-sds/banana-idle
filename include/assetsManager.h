@@ -33,11 +33,16 @@ typedef struct {
 /**
 * @brief Loads all textures into VRAM and calculates the positions.
 */
-void LoadGameAssets(GameAssets* assets, int screenWidth, int screenHeight);
+void LoadGameAssets(GameAssets* assets);
 
 /**
 * @brief Clears the memory properly upon closing.
 */
 void UnloadGameAssets(GameAssets* assets);
+
+/**
+* @brief Recalculates all positions using percentages from the screen.
+*/
+void UpdateLayout(GameAssets* assets);
 
 #endif // ASSETS_MANAGER_H

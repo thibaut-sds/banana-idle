@@ -1,6 +1,6 @@
 #include "assetsManager.h"
 
-void LoadGameAssets(GameAssets* assets, int screenWidth, int screenHeight) {
+void LoadGameAssets(GameAssets* assets) {
     // Loading textures
     assets->bgGameplayTex = LoadTexture("assets/graphics/background_gamescreen.png");
     
@@ -13,29 +13,43 @@ void LoadGameAssets(GameAssets* assets, int screenWidth, int screenHeight) {
     assets->backBtnTex = LoadTexture("assets/graphics/back_button.png");
     SetTextureFilter(assets->backBtnTex, TEXTURE_FILTER_POINT);
 
-    // Layout Calculation (banana)
+    UpdateLayout(assets);
+}
+
+void UpdateLayout(GameAssets* assets) {
+    // We retrieve the CURRENT size of the window
+    float sw = (float)GetScreenWidth();
+    float sh = (float)GetScreenHeight();
+
+    // Banane center (50% X, 50% Y)
     float bananaScale = 8.0f; 
-    float scaledWidth = assets->bananaTex.width * bananaScale;
-    float scaledHeight = assets->bananaTex.height * bananaScale;
-    assets->baseBananaPos = (Vector2){ (screenWidth / 2.0f) - (scaledWidth / 2.0f), (screenHeight / 2.0f) - (scaledHeight / 2.0f) };
-    assets->bananaRec = (Rectangle){ assets->baseBananaPos.x, assets->baseBananaPos.y, scaledWidth, scaledHeight };
+    float scaledW = assets->bananaTex.width * bananaScale;
+    float scaledH = assets->bananaTex.height * bananaScale;
+    assets->baseBananaPos = (Vector2){ (sw * 0.5f) - (scaledW * 0.5f), (sh * 0.5f) - (scaledH * 0.5f) };
+    assets->bananaRec = (Rectangle){ assets->baseBananaPos.x, assets->baseBananaPos.y, scaledW, scaledH };
 
-    // Layout Calculation (shop)
+    // Shop icon (Top Right : 98% X, 2% Y)
     assets->shopScale = 4.0f; 
-    float shopScaledWidth = assets->shopTex.width * assets->shopScale;
-    float shopScaledHeight = assets->shopTex.height * assets->shopScale;
-    assets->shopPos = (Vector2){ screenWidth - shopScaledWidth - 20, 20 };
-    assets->shopRec = (Rectangle){ assets->shopPos.x, assets->shopPos.y, shopScaledWidth, shopScaledHeight };
+    float shopW = assets->shopTex.width * assets->shopScale;
+    float shopH = assets->shopTex.height * assets->shopScale;
+    assets->shopPos = (Vector2){ sw - shopW - (sw * 0.02f), sh * 0.02f };
+    assets->shopRec = (Rectangle){ assets->shopPos.x, assets->shopPos.y, shopW, shopH };
 
-    assets->backBtnScale = 4.0f; 
-    float backScaledWidth = assets->backBtnTex.width * assets->backBtnScale;
-    float backScaledHeight = assets->backBtnTex.height * assets->backBtnScale;
-    assets->backBtnPos = (Vector2){ 20, 20 }; // Top left
-    assets->backBtnRec = (Rectangle){ assets->backBtnPos.x, assets->backBtnPos.y, backScaledWidth, backScaledHeight };
+    // Back button (Top Left : 2% X, 2% Y)
+    assets->backBtnScale = 4.0f;
+    float backW = assets->backBtnTex.width * assets->backBtnScale;
+    float backH = assets->backBtnTex.height * assets->backBtnScale;
+    assets->backBtnPos = (Vector2){ sw * 0.02f, sh * 0.02f };
+    assets->backBtnRec = (Rectangle){ assets->backBtnPos.x, assets->backBtnPos.y, backW, backH };
 
-    // Layout Calculation (shop buttons)
-    assets->btnClickRec = (Rectangle){ 50, 140, 400, 40 };
-    assets->btnIdleRec = (Rectangle){ 50, 190, 400, 40 };
+    // Buy button (Width : 60% of screen, Height : 8%)
+    float btnW = sw * 0.60f; 
+    float btnH = sh * 0.08f; 
+    float startX = (sw - btnW) / 2.0f;
+    
+    // The first button starts at 30% of the height, the second at 42%
+    assets->btnClickRec = (Rectangle){ startX, sh * 0.30f, btnW, btnH };
+    assets->btnIdleRec = (Rectangle){ startX, sh * 0.42f, btnW, btnH };
 }
 
 void UnloadGameAssets(GameAssets* assets) {

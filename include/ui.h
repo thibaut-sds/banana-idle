@@ -18,6 +18,5 @@ void DrawShopButton(Rectangle bounds, const char* text, bool canAfford);
 * @param countStr The score text is already formatted
 * @param bananaTex The texture of the banana can be reused in small.
 */
-void DrawBananaCounter(Vector2 position, const char* countStr, Texture2D bananaTex);
-
+void DrawBananaCounter(Vector2 position, const char* countStr, Texture2D bananaTex, bool isCentered);
 #endif // UI_H

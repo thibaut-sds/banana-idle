@@ -22,8 +22,7 @@ void DrawShopButton(Rectangle bounds, const char* text, bool canAfford) {
     DrawText(text, bounds.x + 10, bounds.y + 10, 20, BLACK);
 }
 
-void DrawBananaCounter(Vector2 position, const char* countStr, Texture2D bananaTex) {
-    // Size configuration
+void DrawBananaCounter(Vector2 position, const char* countStr, Texture2D bananaTex, bool isCentered) {    // Size configuration
     float iconScale = 1.5f;
     float iconSize = bananaTex.width * iconScale;
     int fontSize = 22;
@@ -38,14 +37,19 @@ void DrawBananaCounter(Vector2 position, const char* countStr, Texture2D bananaT
     
     float boxWidth = (paddingX * 2) + iconSize + spacing + textWidth;
     float boxHeight = iconSize + (paddingY * 2);
-    
-    Rectangle box = { position.x, position.y, boxWidth, boxHeight };
-    
+
+    Rectangle box;
+    if (isCentered) {
+        box = (Rectangle){ position.x - (boxWidth / 2.0f), position.y, boxWidth, boxHeight };
+    } else {
+        box = (Rectangle){ position.x, position.y, boxWidth, boxHeight };
+    }
+        
     // Renderer of background
     DrawRectangleRec(box, (Color){ 0, 0, 0, 140 });
     DrawRectangleLinesEx(box, 1, (Color){ 255, 255, 255, 40 }); // border
     
-    Vector2 iconPos = { position.x + paddingX, position.y + paddingY };
+    Vector2 iconPos = { box.x + paddingX, box.y + paddingY };
     DrawTextureEx(bananaTex, iconPos, 0.0f, iconScale, WHITE);
     
     float textX = iconPos.x + iconSize + spacing;

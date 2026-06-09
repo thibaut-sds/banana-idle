@@ -33,7 +33,7 @@ int main(void) {
 
     // Assets
     GameAssets assets;
-    LoadGameAssets(&assets, SCREEN_WIDTH, SCREEN_HEIGHT);
+    LoadGameAssets(&assets);
 
     GameScreen currentScreen = SCREEN_TITLE;
     
@@ -41,6 +41,8 @@ int main(void) {
     // Main game loop
     while (!WindowShouldClose()) {
         float dt = GetFrameTime();
+
+        UpdateLayout(&assets);
         
         // Update game logic 
         UpdateScreens(&gameState, &fx, &currentScreen, &assets, dt);
@@ -129,14 +131,43 @@ void DrawScreens(GameState* state, VisualEffects* fx, GameScreen screen, GameAss
 
     switch(screen) {
         case SCREEN_TITLE:
-            DrawText("BANANA IDLE", 240, 200, 50, ORANGE);
-            DrawText("Click or press ENTER to play !", 180, 300, 20, DARKGRAY);
+            {
+                DrawTexture(assets->bgGameplayTex, 0, 0, WHITE);
+                DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), (Color){ 0, 0, 0, 150 });
+
+                const char* title = "BANANA IDLE";
+                int titleFontSize = 60;
+                int titleWidth = MeasureText(title, titleFontSize);
+                float titleY = GetScreenHeight() * 0.15f;
+                float titleX = (GetScreenWidth() - titleWidth) / 2.0f;
+
+                DrawText(title, titleX + 4, titleY + 4, titleFontSize, BLACK);
+                DrawText(title, titleX, titleY, titleFontSize, ORANGE);
+
+                float breathScale = 8.0f + (sinf(GetTime() * 2.0f) * 0.5f); 
+                float bananaW = assets->bananaTex.width * breathScale;
+                float bananaH = assets->bananaTex.height * breathScale;
+
+                Vector2 bananaPos = {
+                    (GetScreenWidth() - bananaW) / 2.0f,
+                    (GetScreenHeight() - bananaH) / 2.0f
+                };
+                DrawTextureEx(assets->bananaTex, bananaPos, 0.0f, breathScale, WHITE);
+
+                const char* promptText = "- Click or press ENTER to play -";
+                int promptFontSize = 24;
+                int promptWidth = MeasureText(promptText, promptFontSize);
+
+                unsigned char alpha = (unsigned char)((sinf(GetTime() * 4.0f) * 0.5f + 0.5f) * 255.0f);
+                Color promptColor = (Color){ 220, 220, 220, alpha };
+                DrawText(promptText, (GetScreenWidth() - promptWidth) / 2, GetScreenHeight() * 0.85f, promptFontSize, promptColor);
+            }
             break;
             
         case SCREEN_GAMEPLAY:
             DrawTexture(assets->bgGameplayTex, 0, 0, WHITE);
             BigNumberToString(state->bananas, scoreBuffer, sizeof(scoreBuffer));
-            DrawBananaCounter((Vector2){ 20, 20 }, scoreBuffer, assets->bananaTex);
+            DrawBananaCounter((Vector2){ GetScreenWidth() * 0.02f, GetScreenHeight() * 0.02f }, scoreBuffer, assets->bananaTex, false);
             
             // banana's draw with scale effect
             float currentWidth = assets->bananaTex.width * fx->currentBananaScale;
@@ -173,13 +204,15 @@ void DrawScreens(GameState* state, VisualEffects* fx, GameScreen screen, GameAss
             break;
 
         case SCREEN_SHOP:
-            DrawText("--- SHOP ---", 280, 50, 40, DARKBLUE);
-            DrawText("Press ENTER to return to the game", 180, 550, 20, DARKGRAY);
+            DrawTexture(assets->bgGameplayTex, 0, 0, WHITE);
+            DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), (Color){ 0, 0, 0, 180 });
+            DrawTextureEx(assets->backBtnTex, assets->backBtnPos, 0.0f, assets->backBtnScale, WHITE);
+
+            int titleWidth = MeasureText("--- SHOP ---", 40);
+            DrawText("--- SHOP ---", (GetScreenWidth() - titleWidth) / 2, GetScreenHeight() * 0.05f, 40, DARKBLUE);
 
             BigNumberToString(state->bananas, scoreBuffer, sizeof(scoreBuffer));
-            DrawBananaCounter((Vector2){ 160, 20 }, scoreBuffer, assets->bananaTex);
-
-            DrawTextureEx(assets->backBtnTex, assets->backBtnPos, 0.0f, assets->backBtnScale, WHITE);
+            DrawBananaCounter((Vector2){ GetScreenWidth() * 0.5f, GetScreenHeight() * 0.15f }, scoreBuffer, assets->bananaTex, true);
 
             char clickCostStr[32];
             BigNumberToString(state->shop.clickUpgrade.currentCost, clickCostStr, sizeof(clickCostStr));

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "game.h"
 #include "raylib.h"
+#include "ui.h"
 
 #define MAX_FLOATING_TEXTS 50
 
@@ -19,6 +20,9 @@ typedef struct {
 } VisualEffects;
 
 typedef struct {
+    // Backgrounds
+    Texture2D bgGameplayTex;
+
     // Banana
     Texture2D bananaTex;
     Vector2 baseBananaPos;
@@ -57,6 +61,7 @@ int main(void) {
 
     // Assets
     GameAssets assets;
+    assets.bgGameplayTex = LoadTexture("assets/graphics/background_gamescreen.png");
     assets.bananaTex = LoadTexture("assets/graphics/banana.png");
     SetTextureFilter(assets.bananaTex, TEXTURE_FILTER_POINT);
     assets.shopTex = LoadTexture("assets/graphics/shop.png");
@@ -92,6 +97,7 @@ int main(void) {
         EndDrawing();
     }
 
+    UnloadTexture(assets.bgGameplayTex);
     UnloadTexture(assets.bananaTex);
     UnloadTexture(assets.shopTex);
     CloseWindow();
@@ -165,11 +171,20 @@ void UpdateScreens(GameState* state, VisualEffects* fx, GameScreen* screen, Game
                 *screen = SCREEN_GAMEPLAY;
             }
             
-            if (IsKeyPressed(KEY_C)) {
-                BuyClickUpgrade(state);
-            }
-            if (IsKeyPressed(KEY_I)) {
-                BuyIdleUpgrade(state);
+            if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                Vector2 mousePos = GetMousePosition();
+                
+                // define shop buttons rectangles
+                Rectangle btnClickRec = { 50, 140, 400, 40 };
+                Rectangle btnIdleRec = { 50, 190, 400, 40 };
+                
+                if (CheckCollisionPointRec(mousePos, btnClickRec)) {
+                    BuyClickUpgrade(state);
+                }
+                
+                if (CheckCollisionPointRec(mousePos, btnIdleRec)) {
+                    BuyIdleUpgrade(state);
+                }
             }
             break;
     }
@@ -185,6 +200,7 @@ void DrawScreens(GameState* state, VisualEffects* fx, GameScreen screen, GameAss
             break;
             
         case SCREEN_GAMEPLAY:
+            DrawTexture(assets->bgGameplayTex, 0, 0, WHITE);
             BigNumberToString(state->bananas, scoreBuffer, sizeof(scoreBuffer));
             DrawText(TextFormat("Bananas: %s", scoreBuffer), 30, 30, 30, BLACK);
             
@@ -216,13 +232,21 @@ void DrawScreens(GameState* state, VisualEffects* fx, GameScreen screen, GameAss
             BigNumberToString(state->bananas, scoreBuffer, sizeof(scoreBuffer));
             DrawText(TextFormat("Bananas: %s", scoreBuffer), 30, 30, 20, BLACK);
 
+            Rectangle btnClickRec = { 50, 140, 400, 40 };
+            Rectangle btnIdleRec = { 50, 190, 400, 40 };
+
             char clickCostStr[32];
             BigNumberToString(state->shop.clickUpgrade.currentCost, clickCostStr, sizeof(clickCostStr));
-            DrawText(TextFormat("[C] Double Clic (Lvl %d) - Cost: %s", state->shop.clickUpgrade.level, clickCostStr), 50, 150, 20, BLACK);
-
+            const char* clickText = TextFormat("Double Clic (Lvl %d) - Cost: %s", state->shop.clickUpgrade.level, clickCostStr);
+            bool canAffordClick = (BigNumberCompare(state->bananas, state->shop.clickUpgrade.currentCost) >= 0);
+            
             char idleCostStr[32];
             BigNumberToString(state->shop.idleUpgrade.currentCost, idleCostStr, sizeof(idleCostStr));
-            DrawText(TextFormat("[I] +1 Banana/sec (Lvl %d) - Cost: %s", state->shop.idleUpgrade.level, idleCostStr), 50, 200, 20, BLACK);
+            const char* idleText = TextFormat("+1 Banana/sec (Lvl %d) - Cost: %s", state->shop.idleUpgrade.level, idleCostStr);
+            bool canAffordIdle = (BigNumberCompare(state->bananas, state->shop.idleUpgrade.currentCost) >= 0);
+
+            DrawShopButton(btnClickRec, clickText, canAffordClick);
+            DrawShopButton(btnIdleRec, idleText, canAffordIdle);
             break;
     }
 }

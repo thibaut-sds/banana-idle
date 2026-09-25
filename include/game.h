@@ -1,6 +1,8 @@
 #ifndef GAME_H
 #define GAME_H
 
+#include <stdbool.h>
+
 #include "bignumber.h"
 #include "upgrades.h"
 
@@ -20,6 +22,9 @@ typedef struct {
     BigNumber clickPower;        // How many bananas per click
     BigNumber bananasPerSecond;  // Idle production
     Shop shop;
+
+    float feverGauge; // From 0.0 to 100.0
+    bool isFever;
 } GameState;
 
 /**

@@ -50,6 +50,20 @@ int main(void) {
         BeginDrawing();
         ClearBackground(RAYWHITE);
         DrawScreens(&gameState, &fx, currentScreen, &assets);
+
+        // Virtual camera
+        Camera2D camera = { 0 };
+        camera.zoom = 1.0f;
+        // If Fever mode is active during gameplay, the entire screen shifts randomly by a few pixels
+        if (gameState.isFever && currentScreen == SCREEN_GAMEPLAY) {
+            camera.offset.x = (float)GetRandomValue(-3, 3);
+            camera.offset.y = (float)GetRandomValue(-3, 3);
+        }
+
+        BeginMode2D(camera);
+        DrawScreens(&gameState, &fx, currentScreen, &assets);
+        EndMode2D();
+
         EndDrawing();
     }
 
@@ -87,8 +101,13 @@ void UpdateScreens(GameState* state, VisualEffects* fx, GameScreen* screen, Game
                     fx->currentBananaScale = 7.5f; // squish effect
                     
                     // Text : +x bananas
+                    BigNumber visualGain = state->clickPower;
+                    if (state->isFever) {
+                        visualGain = BigNumberMultiply(visualGain, BigNumberFromFloat(2.0f));
+                    }
+
                     char gainStr[32];
-                    BigNumberToString(state->clickPower, gainStr, sizeof(gainStr));
+                    BigNumberToString(visualGain, gainStr, sizeof(gainStr));
                     char fullText[64];
                     snprintf(fullText, sizeof(fullText), "+%s", gainStr);
                     SpawnFloatingText(fx, mousePos, fullText);
@@ -169,6 +188,15 @@ void DrawScreens(GameState* state, VisualEffects* fx, GameScreen screen, GameAss
             DrawTexture(assets->bgGameplayTex, 0, 0, WHITE);
             BigNumberToString(state->bananas, scoreBuffer, sizeof(scoreBuffer));
             DrawBananaCounter((Vector2){ GetScreenWidth() * 0.02f, GetScreenHeight() * 0.02f }, scoreBuffer, assets->bananaTex, false);
+
+            // Fever gauge centered at the bottom of the screen
+            float gaugeWidth = 400.0f;
+            float gaugeHeight = 30.0f;
+            Vector2 gaugePos = {
+                (GetScreenWidth() - gaugeWidth) / 2.0f,
+                GetScreenHeight() - gaugeHeight - 30.0f
+            };
+            DrawFeverGauge(gaugePos, gaugeWidth, gaugeHeight, state->feverGauge, state->isFever);
             
             // banana's draw with scale effect
             float currentWidth = assets->bananaTex.width * fx->currentBananaScale;

@@ -5,6 +5,7 @@
 #include <stdbool.h>
 
 #define MAX_FLOATING_TEXTS 50
+#define MAX_PARTICLES 100
 
 typedef struct {
     Vector2 position;
@@ -15,10 +16,22 @@ typedef struct {
 } FloatingText;
 
 typedef struct {
+    Vector2 position;
+    Vector2 velocity;
+    float rotation;
+    float rotationSpeed;
+    float scale;
+    float life;
+    float maxLife;
+    bool active;
+} Particle;
+
+typedef struct {
     float currentBananaScale;
     float targetBananaScale;
     float shopButtonRotation;
     FloatingText texts[MAX_FLOATING_TEXTS];
+    Particle particles[MAX_PARTICLES];
 } VisualEffects;
 
 /**
@@ -41,5 +54,13 @@ void UpdateShopButtonHover(VisualEffects* fx, bool isHovered, float dt);
 * @brief Displays floating text at a given position.
 */
 void SpawnFloatingText(VisualEffects* fx, Vector2 position, const char* text);
+
+/**
+* @brief Spawns particles at a given position.
+* @param fx The visual effects manager.
+* @param position The position where particles should be spawned.
+* @param count The number of particles to spawn.
+*/
+void SpawnClickParticles(VisualEffects* fx, Vector2 position, int count);
 
 #endif // VFX_MANAGER_H

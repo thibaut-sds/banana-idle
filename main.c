@@ -92,6 +92,7 @@ void UpdateScreens(GameState* state, VisualEffects* fx, GameScreen* screen, Game
                     char fullText[64];
                     snprintf(fullText, sizeof(fullText), "+%s", gainStr);
                     SpawnFloatingText(fx, mousePos, fullText);
+                    SpawnClickParticles(fx, mousePos, GetRandomValue(5, 8));
                 }
                 // Click on the shop button
                 if (isShopHovered) {
@@ -199,6 +200,25 @@ void DrawScreens(GameState* state, VisualEffects* fx, GameScreen screen, GameAss
                     unsigned char alpha = (unsigned char)((fx->texts[i].life / fx->texts[i].maxLife) * 255);
                     Color textColor = { 50, 200, 50, alpha }; 
                     DrawText(fx->texts[i].text, (int)fx->texts[i].position.x, (int)fx->texts[i].position.y, 20, textColor);
+                }
+            }
+
+            for (int i = 0; i < MAX_PARTICLES; i++) {
+                if (fx->particles[i].active) {
+                    // fadout on the end of the lifetime
+                    unsigned char alpha = 255;
+                    if (fx->particles[i].life < 0.2f) { // Starts to disappear 0.2s before the end
+                        alpha = (unsigned char)((fx->particles[i].life / 0.2f) * 255);
+                    }
+                    Color particleColor = (Color){ 255, 255, 255, alpha };
+                    
+                    float pw = assets->bananaTex.width * fx->particles[i].scale;
+                    float ph = assets->bananaTex.height * fx->particles[i].scale;
+                    Rectangle pSource = { 0.0f, 0.0f, (float)assets->bananaTex.width, (float)assets->bananaTex.height };
+                    Rectangle pDest = { fx->particles[i].position.x, fx->particles[i].position.y, pw, ph };
+                    Vector2 pOrigin = { pw / 2.0f, ph / 2.0f }; // Centered for rotation
+                    
+                    DrawTexturePro(assets->bananaTex, pSource, pDest, pOrigin, fx->particles[i].rotation, particleColor);
                 }
             }
             break;

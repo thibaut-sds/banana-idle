@@ -1,55 +1,48 @@
-# Prerequisites
-*.d
-
-# Object files
+# --- Compilations ---
 *.o
-*.ko
-*.obj
+*.a
+*.so
+*.out
+*.exe
 *.elf
 
-# Linker output
-*.ilk
-*.map
-*.exp
+# --- Exécutables Unix ---
+a.out
 
-# Precompiled Headers
-*.gch
-*.pch
+# --- Build directories ---
+/build/
+/bin/
+/obj/
 
-# Libraries
-*.lib
-*.a
-*.la
-*.lo
+# --- Logs ---
+*.log
 
-# Shared objects (inc. Windows DLLs)
-*.dll
-*.so
-*.so.*
-*.dylib
-
-# Executables
-*.exe
-*.out
-*.app
-*.i*86
-*.x86_64
-*.hex
-
-# Debug files
+# --- Debug / profiling ---
 *.dSYM/
-*.su
-*.idb
-*.pdb
+/*.prof
+*.gcda
+*.gcno
+*.gcov
 
-# Kernel Module Compile Results
-*.mod*
-*.cmd
-.tmp_versions/
-modules.order
-Module.symvers
-Mkfile.old
-dkms.conf
+# --- Editors / IDEs ---
+# VSCode
+.vscode/
+*.code-workspace
 
-# debug information files
-*.dwo
+# CLion / JetBrains
+.idea/
+cmake-build-*/
+
+# Vim
+*.swp
+*.swo
+
+# Emacs
+*~
+
+# --- OS files ---
+.DS_Store
+Thumbs.db
+
+# Krita
+*.kra

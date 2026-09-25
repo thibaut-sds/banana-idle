@@ -56,3 +56,28 @@ void DrawBananaCounter(Vector2 position, const char* countStr, Texture2D bananaT
     float textY = position.y + (boxHeight / 2.0f) - (fontSize / 2.0f); // Centré verticalement
     DrawText(countStr, (int)textX, (int)textY, fontSize, WHITE);
 }
+
+void DrawFeverGauge(Vector2 position, float width, float height, float feverAmount, bool isFever) {
+    Rectangle bgRec = { position.x, position.y, width, height };
+    DrawRectangleRec(bgRec, (Color){ 30, 30, 30, 200 }); // Fond sombre
+    DrawRectangleLinesEx(bgRec, 2, (Color){ 255, 255, 255, 80 }); // Bordure
+    
+    // The fill width is calculated
+    float fillWidth = (feverAmount / 100.0f) * width;
+    Rectangle fillRec = { position.x, position.y, fillWidth, height };
+    
+    Color fillColor;
+    if (isFever) {
+        // make the color flash very rapidly (red/yellow strobe)
+        fillColor = (GetTime() * 15.0f > floor(GetTime() * 15.0f) + 0.5f) ? RED : YELLOW;
+    } else {
+        fillColor = ORANGE;
+    }
+    
+    DrawRectangleRec(fillRec, fillColor);
+    
+    if (isFever) {
+        int textW = MeasureText("FEVER !", 20);
+        DrawText("FEVER !", position.x + (width - textW) / 2.0f, position.y + (height - 20) / 2.0f, 20, WHITE);
+    }
+}
